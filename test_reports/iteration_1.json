@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only smoke+integration tests on Expo web preview (mobile viewport 375x667) for LavaJatoAgenda. All 11 requested flows pass. App uses localStorage via db.web.ts; all testIDs present and wired correctly. Dark theme and pt-BR content verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["Console warning: 'shadow*' style props deprecated (FAB in index.tsx uses shadowColor/shadowOpacity/shadowRadius/shadowOffset) — prefer boxShadow on web or keep as-is for native. Non-blocking.", "Console warning: props.pointerEvents deprecated — coming from react-native-web internals, not app code."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_1.json"],
+  "action_items": [
+    "(Optional) Replace shadow* style props on FAB with boxShadow for web or use Platform.select to silence deprecation warnings.",
+    "(Optional) In schedule.tsx the dateBtnText shows formatDateShort(pickup)/year -> 'DD/MM/YYYY' which uses an inline '/' concat; cosmetic only."
+  ],
+  "critical_code_review_comments": [
+    "index.tsx uses window.confirm on web with exact required text 'Deseja realmente excluir este agendamento?' — OK.",
+    "Search filter is case-insensitive via toLowerCase on both sides — OK.",
+    "Validation in schedule.tsx blocks save when carName/carModel empty and shows pt-BR errors — OK.",
+    "useFocusEffect reloads list on return from schedule screen, so counter and list update automatically — OK.",
+    "Local-only app: no backend dependencies. db.web.ts uses localStorage key 'lavajato:schedules'."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (no backend)", "frontend": "100% (10/10 user-visible flows + validation)"},
+  "seed_data_creation": "Tests cleared and seeded localStorage between scenarios.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "App is 100% local. Use window.localStorage key 'lavajato:schedules' to seed/clear. For delete tests register page.on('dialog', lambda d: d.accept()) BEFORE clicking, and use locator.dispatch_event('click') or expect page.click() to hang (Playwright+window.confirm blocks the click promise) — functionality still works; verify by reading localStorage after dialog accept. Exact delete confirm text (pt-BR): 'Deseja realmente excluir este agendamento?'.",
+  "rca_of_issue": "",
+  "tests_executed": {
+    "home_header_brand_agenda_counter_empty_ptbr": "PASS (counter=0, 'Nenhum agendamento' shown)",
+    "fab_opens_new_schedule_screen": "PASS ('Novo agendamento' heading visible)",
+    "validation_empty_fields": "PASS (shows 'Informe o nome do carro' and 'Informe o modelo do carro')",
+    "create_schedule_and_returns_to_list": "PASS (item visible, counter 0→1)",
+    "counter_updates_on_additional_create": "PASS (counter 1→2)",
+    "search_case_insensitive_by_car_name": "PASS ('CIVIC' matched 'Civic do João', filtered out 'Corolla da Maria')",
+    "search_no_results_empty_state": "PASS ('Nenhum resultado' shown)",
+    "search_clear_button": "PASS (visible with text, clears input to empty)",
+    "tap_item_opens_edit_prefilled": "PASS ('Editar agendamento', name and model pre-filled)",
+    "edit_save_updates_list": "PASS (edited name visible in list)",
+    "delete_confirm_exact_ptbr_text_and_removes": "PASS (window.confirm fired with exact text 'Deseja realmente excluir este agendamento?')"
+  }
+}
