@@ -1,0 +1,105 @@
+{
+  "project_name": "LavaJatoAgenda",
+  "app_type": "mobile_web_app",
+  "theme": "Dark",
+  "archetype": "Archetype 2 (Performance Pro)",
+  "language": "pt-BR",
+  "color_palette": {
+    "background": "#0A0A0A",
+    "surface": "#121212",
+    "surface_elevated": "#1C1C1E",
+    "primary_accent": "#007AFF",
+    "danger_accent": "#FF3B30",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#8E8E93",
+    "border": "#2C2C2E"
+  },
+  "typography": {
+    "headings": {
+      "family": "Barlow Condensed, sans-serif",
+      "weight": "900",
+      "tracking": "tracking-tight",
+      "sizes": {
+        "h1": "text-3xl sm:text-4xl",
+        "h2": "text-2xl sm:text-3xl",
+        "h3": "text-xl sm:text-2xl"
+      }
+    },
+    "body": {
+      "family": "Inter, sans-serif",
+      "weight": "400",
+      "tracking": "tracking-wide",
+      "sizes": {
+        "base": "text-base",
+        "sm": "text-sm",
+        "xs": "text-xs"
+      }
+    }
+  },
+  "spacing_and_layout": {
+    "grid": "grid-cols-1 gap-4 p-4",
+    "padding": "p-4 sm:p-6",
+    "radius": "rounded-xl",
+    "mobile_first": true
+  },
+  "components": {
+    "card": {
+      "background": "bg-[#1C1C1E]",
+      "border": "border border-[#2C2C2E]",
+      "shadow": "shadow-none",
+      "radius": "rounded-xl",
+      "padding": "p-4"
+    },
+    "button": {
+      "primary": "bg-[#007AFF] text-white font-bold rounded-lg px-6 py-3",
+      "danger": "bg-[#FF3B30] text-white font-bold rounded-lg px-6 py-3",
+      "fab": "absolute bottom-6 right-6 w-14 h-14 bg-[#007AFF] rounded-full flex items-center justify-center shadow-lg"
+    },
+    "input": {
+      "background": "bg-[#121212]",
+      "border": "border border-[#2C2C2E]",
+      "text": "text-white",
+      "placeholder": "text-[#8E8E93]",
+      "radius": "rounded-lg",
+      "padding": "px-4 py-3"
+    },
+    "dialog": {
+      "background": "bg-[#1C1C1E]",
+      "border": "border border-[#2C2C2E]",
+      "radius": "rounded-xl"
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "outline",
+    "size": "24"
+  },
+  "images": {
+    "empty_state": {
+      "url": "https://images.pexels.com/photos/4665714/pexels-photo-4665714.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "A classic vintage car covered in soap foam at a carwash during nighttime. Used for the empty state background with high opacity overlay."
+    }
+  },
+  "key_features": [
+    "List of scheduled car washes (showing car name, model, pickup time)",
+    "Create new schedule form (car name, model, pickup time/date)",
+    "Edit existing schedule (tap item to open edit screen with pre-filled fields)",
+    "Delete schedule with confirmation dialog ('Deseja realmente excluir este agendamento?')",
+    "Real-time search bar at top of list (filter by car name, case-insensitive)",
+    "Empty state when no schedules exist",
+    "Floating action button or prominent '+' to add new schedule"
+  ],
+  "testing": {
+    "data_testid_rules": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case."
+  },
+  "instructions_to_main_agent": [
+    "Since the stack dictates .js files, ensure any code provided adheres to Javascript (no Typescript interfaces).",
+    "Implement expo-sqlite logic tailored to local storage requirements as specified.",
+    "Ensure all UI text is strictly in Portuguese (pt-BR).",
+    "Search functionality must be real-time and case-insensitive on the 'car name' field.",
+    "Delete confirmation dialog must use the exact text: 'Deseja realmente excluir este agendamento?'.",
+    "Use the Volt Blue (#007AFF) for the primary FAB and call-to-actions, maintaining strong contrast against the Dark Theme.",
+    "The empty state should feature the provided vintage car wash image with a heavy dark overlay to ensure text readability.",
+    "Follow 'Performance Pro' Archetype strictly. Avoid any 'teal' colors. Use 1px borders instead of shadows where possible."
+  ]
+}
