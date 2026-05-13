@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 2 — frontend-only review of LavaJatoAgenda 'Nível 1' (Tabs+Dashboard+Calendar+Agenda+Schedule). Runtime Playwright execution was blocked by an unstable Expo tunnel (ngrok 502s with the preview URL cycling between 200/502 every few seconds; supervisor expo restarts repeatedly with 'ngrok tunnel took too long to connect' / 'endpoint already online ERR_NGROK_334'). I completed a comprehensive code review of all referenced files; all 16 requested behaviors map 1:1 to the code. Iteration_1 already validated core Agenda CRUD/search/edit/delete flows via Playwright successfully — those still apply.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": ["RN-Web warnings 'shadow* style props are deprecated. Use boxShadow' and 'props.pointerEvents is deprecated' still present (non-blocking)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_2.json", "/app/test_reports/iteration_1.json"],
+  "action_items": [
+    "INFRA (HIGH): Expo tunnel is unstable — ngrok endpoint 'schedule-manager-102.ngrok.io' is being claimed by a previous process causing supervisor to restart expo repeatedly. Suggest checking expo supervisor config (maybe replace --tunnel with a stable mode) so QA can run end-to-end. This blocked runtime verification.",
+    "(Optional) Replace shadow* style props with boxShadow on web in FAB/cards to silence deprecation warnings.",
+    "(Optional) The 'Próximo horário' card uses `new Date(pickupTime) >= now` — items whose time has already passed today are excluded from 'próximo'. Confirm this is desired (spec: 'horário do próximo Agendado/Em andamento'). If user wants the next *upcoming* one only, current behavior is correct."
+  ],
+  "critical_code_review_comments": [
+    "Tabs layout (app/(tabs)/_layout.tsx) renders exactly 3 Tabs.Screen: Dashboard, Agenda, Calendário with Ionicons — matches spec.",
+    "Dashboard (app/(tabs)/index.tsx) computes: totalToday = todays.length; faturadoToday = sum where status !== 'Cancelado'; concluidos = todays.filter(status==='Finalizado').length; proximo = next-non-Final/non-Cancel sorted by pickupTime ASC with pickup>=now. Cards use exact testIDs dashboard-card-{today,revenue,done,next}. Math matches the seeded scenario (3, R$260, 1, próximo).",
+    "Dashboard uses useFocusEffect(load) so it auto-refreshes after navigation back — verified pattern. Logo loaded via require('../../assets/images/logo.png').",
+    "Agenda (app/(tabs)/agenda.tsx): chips render FILTER_OPTIONS with testID `filter-${item.replace(/\\s+/g,'-').toLowerCase()}` → matches 'filter-todos', 'filter-agendado', 'filter-em-andamento', 'filter-finalizado', 'filter-cancelado'. Search input testID 'search-input'. Sort modal with sort-button + sort-option-horario/nome/valor. Status badges render testID `status-badge-${id}` with statusColor dot — colors map to blue/orange/green/red.",
+    "Sort logic: horario → a.pickupTime.localeCompare(b.pickupTime) ASC; nome → pt-BR localeCompare base; valor → (b.valor-a.valor) DESC. Matches spec.",
+    "Delete (web): uses window.confirm with EXACT text 'Deseja realmente excluir este agendamento?' (no '?' missing, no extra punctuation).",
+    "FAB testID 'fab-add-schedule' navigates to /schedule.",
+    "Schedule (app/schedule.tsx): inputs input-car-name/input-car-model/input-valor (decimal-pad), STATUSES rendered as status-option-* chips (status-option-em-andamento via slug rule), pickup-date-btn + pickup-time-btn + save-schedule-btn. Validation requires carName.trim() and carModel.trim() — shows pt-BR errors. Editing prefills from getScheduleById when id param present. parseValueInput accepts '50', '50,00', '50.00'.",
+    "Calendar (app/(tabs)/calendar.tsx): calendar-prev-day/-next-day shift ±1 day; calendar-day-count shows dayItems.length; calendar-open-picker opens DateTimePicker; calendar-item-${id} navigates to edit; calendar-empty shown when 0 items.",
+    "Persistence: db.web.ts uses localStorage key 'lavajato:schedules:v2' with v1→v2 migration; all CRUD ops persist immediately.",
+    "Theme: useColorScheme() switches palettes — primary #0D47A1 (light) / #42A5F5 (dark), backgrounds correct.",
+    "All text is wrapped in <Text>; all interactive elements use TouchableOpacity/Pressable; no raw HTML elements; KeyboardAvoidingView wraps schedule form."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "Iteration 1: 100% on core flows (search/CRUD/delete confirm/validation/edit). Iteration 2: 0% runtime execution due to tunnel; 100% on code-level spec verification (all 16 features mapped to code correctly)."},
+  "seed_data_creation": "Planned seed: localStorage 'lavajato:schedules:v2' = [Civic Agendado 80, Corolla Finalizado 120, Onix Em andamento 60] today — could not execute end-to-end due to tunnel instability.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Tunnel/ngrok is unstable. Before testing, verify https://schedule-manager-102.preview.emergentagent.com/ returns HTTP 200 consistently for 30+ seconds (curl loop). If it cycles, wait for expo supervisor to stabilize. Use localStorage key 'lavajato:schedules:v2'. For delete: register page.on('dialog', lambda d: asyncio.create_task(d.accept())) BEFORE clicking schedule-delete-btn-{id}; exact confirm text is 'Deseja realmente excluir este agendamento?'. For dark theme use page.emulate_media(color_scheme='dark'). All testIDs documented in critical_code_review_comments above. Iteration_1 already proved Agenda flows pass.",
+  "rca_of_issue": "Runtime test blocked by infra: expo supervisor command is `expo start --tunnel --port 3000`. Ngrok subdomain 'schedule-manager-102' is intermittently reporting 'endpoint already online' (ERR_NGROK_334) and 'tunnel took too long to connect' — likely a stale tunnel from a prior process. Expo crashes → supervisor restarts → 30-60s outage → brief 200 window → crashes again. Recommend the main agent investigate the expo supervisor recipe to ensure clean tunnel teardown, or run without tunnel for local web preview.",
+  "tests_executed": {
+    "code_review_full": "PASS — all 16 behaviors mapped to code",
+    "runtime_playwright": "BLOCKED — ngrok tunnel cycling (502s)",
+    "previous_iteration_inheritance": "iteration_1 PASS on core agenda flows"
+  }
+}

@@ -1,21 +1,56 @@
-// Web fallback using localStorage (mobile preview runs in web; native uses expo-sqlite via db.native.ts).
+// Web fallback using localStorage (preview-only). Native uses expo-sqlite.
+
+import type { Status } from './status';
 
 export type Schedule = {
   id: number;
   carName: string;
   carModel: string;
   pickupTime: string;
+  status: Status;
+  valor: number;
+  dataAgendamento: string;
   createdAt: string;
 };
 
-const KEY = 'lavajato:schedules';
+const KEY = 'lavajato:schedules:v2';
+const LEGACY_KEY = 'lavajato:schedules';
+
+function deriveDate(pickupTime: string): string {
+  const d = new Date(pickupTime);
+  if (isNaN(d.getTime())) return '';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function migrate(items: any[]): Schedule[] {
+  return items.map((i) => ({
+    id: i.id,
+    carName: i.carName,
+    carModel: i.carModel,
+    pickupTime: i.pickupTime,
+    status: (i.status as Status) || 'Agendado',
+    valor: typeof i.valor === 'number' ? i.valor : 0,
+    dataAgendamento: i.dataAgendamento || deriveDate(i.pickupTime),
+    createdAt: i.createdAt || new Date().toISOString(),
+  }));
+}
 
 function readAll(): Schedule[] {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return [];
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as Schedule[];
+    if (raw) return JSON.parse(raw) as Schedule[];
+    // Migrate legacy v1 data if present
+    const legacy = window.localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      const migrated = migrate(JSON.parse(legacy));
+      window.localStorage.setItem(KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    return [];
   } catch {
     return [];
   }
@@ -31,7 +66,7 @@ function writeAll(items: Schedule[]) {
 }
 
 export async function getDb(): Promise<void> {
-  // no-op on web
+  // no-op
 }
 
 export async function listSchedules(): Promise<Schedule[]> {
@@ -42,7 +77,9 @@ export async function listSchedules(): Promise<Schedule[]> {
 export async function createSchedule(
   carName: string,
   carModel: string,
-  pickupTime: string
+  pickupTime: string,
+  status: Status,
+  valor: number
 ): Promise<number> {
   const items = readAll();
   const id = items.length ? Math.max(...items.map((i) => i.id)) + 1 : 1;
@@ -51,6 +88,9 @@ export async function createSchedule(
     carName,
     carModel,
     pickupTime,
+    status,
+    valor,
+    dataAgendamento: deriveDate(pickupTime),
     createdAt: new Date().toISOString(),
   };
   items.push(row);
@@ -62,12 +102,22 @@ export async function updateSchedule(
   id: number,
   carName: string,
   carModel: string,
-  pickupTime: string
+  pickupTime: string,
+  status: Status,
+  valor: number
 ): Promise<void> {
   const items = readAll();
   const idx = items.findIndex((i) => i.id === id);
   if (idx === -1) return;
-  items[idx] = { ...items[idx], carName, carModel, pickupTime };
+  items[idx] = {
+    ...items[idx],
+    carName,
+    carModel,
+    pickupTime,
+    status,
+    valor,
+    dataAgendamento: deriveDate(pickupTime),
+  };
   writeAll(items);
 }
 
@@ -77,6 +127,5 @@ export async function deleteSchedule(id: number): Promise<void> {
 }
 
 export async function getScheduleById(id: number): Promise<Schedule | null> {
-  const found = readAll().find((i) => i.id === id);
-  return found ?? null;
+  return readAll().find((i) => i.id === id) ?? null;
 }

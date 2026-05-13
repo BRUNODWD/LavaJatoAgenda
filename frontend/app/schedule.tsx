@@ -19,9 +19,12 @@ import {
   getScheduleById,
   updateSchedule,
 } from '../src/db';
-import { formatDateShort, formatTimeShort } from '../src/format';
+import { formatBRL, formatDateShort, formatTimeShort, parseValueInput } from '../src/format';
+import { STATUSES, Status, statusColor } from '../src/status';
+import { useTheme } from '../src/theme';
 
 export default function ScheduleScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const editingId = params.id ? Number(params.id) : null;
@@ -29,6 +32,8 @@ export default function ScheduleScreen() {
 
   const [carName, setCarName] = useState('');
   const [carModel, setCarModel] = useState('');
+  const [valor, setValor] = useState('');
+  const [status, setStatus] = useState<Status>('Agendado');
   const [pickup, setPickup] = useState<Date>(() => {
     const d = new Date();
     d.setMinutes(0, 0, 0);
@@ -47,6 +52,8 @@ export default function ScheduleScreen() {
       if (row) {
         setCarName(row.carName);
         setCarModel(row.carModel);
+        setStatus(row.status);
+        setValor(row.valor ? String(row.valor).replace('.', ',') : '');
         const d = new Date(row.pickupTime);
         if (!isNaN(d.getTime())) setPickup(d);
       }
@@ -65,10 +72,11 @@ export default function ScheduleScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
+      const valorNum = parseValueInput(valor);
       if (isEditing && editingId !== null) {
-        await updateSchedule(editingId, carName.trim(), carModel.trim(), pickup.toISOString());
+        await updateSchedule(editingId, carName.trim(), carModel.trim(), pickup.toISOString(), status, valorNum);
       } else {
-        await createSchedule(carName.trim(), carModel.trim(), pickup.toISOString());
+        await createSchedule(carName.trim(), carModel.trim(), pickup.toISOString(), status, valorNum);
       }
       router.back();
     } catch (e) {
@@ -98,7 +106,10 @@ export default function ScheduleScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['left', 'right', 'bottom']}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -107,15 +118,15 @@ export default function ScheduleScreen() {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.heading}>
+          <Text style={[styles.heading, { color: theme.textPrimary }]}>
             {isEditing ? 'Editar agendamento' : 'Novo agendamento'}
           </Text>
-          <Text style={styles.sub}>
-            Preencha os dados do carro e o horário da retirada.
+          <Text style={[styles.sub, { color: theme.textSecondary }]}>
+            Preencha os dados do cliente, valor e horário.
           </Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Nome do carro</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Nome do cliente</Text>
             <TextInput
               testID="input-car-name"
               value={carName}
@@ -124,17 +135,24 @@ export default function ScheduleScreen() {
                 if (errors.carName) setErrors((p) => ({ ...p, carName: undefined }));
               }}
               placeholder="Ex: Civic do João"
-              placeholderTextColor="#6C6C70"
-              style={[styles.input, errors.carName ? styles.inputError : null]}
+              placeholderTextColor={theme.textSecondary}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: errors.carName ? theme.danger : theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
               autoCapitalize="words"
             />
             {errors.carName ? (
-              <Text style={styles.errorText}>{errors.carName}</Text>
+              <Text style={[styles.errorText, { color: theme.danger }]}>{errors.carName}</Text>
             ) : null}
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Modelo do carro</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Modelo do carro</Text>
             <TextInput
               testID="input-car-model"
               value={carModel}
@@ -143,37 +161,108 @@ export default function ScheduleScreen() {
                 if (errors.carModel) setErrors((p) => ({ ...p, carModel: undefined }));
               }}
               placeholder="Ex: Honda Civic 2020"
-              placeholderTextColor="#6C6C70"
-              style={[styles.input, errors.carModel ? styles.inputError : null]}
+              placeholderTextColor={theme.textSecondary}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: errors.carModel ? theme.danger : theme.border,
+                  color: theme.textPrimary,
+                },
+              ]}
               autoCapitalize="words"
             />
             {errors.carModel ? (
-              <Text style={styles.errorText}>{errors.carModel}</Text>
+              <Text style={[styles.errorText, { color: theme.danger }]}>{errors.carModel}</Text>
             ) : null}
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Horário da retirada</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Valor (R$)</Text>
+            <TextInput
+              testID="input-valor"
+              value={valor}
+              onChangeText={setValor}
+              placeholder="0,00"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="decimal-pad"
+              style={[
+                styles.input,
+                { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary },
+              ]}
+            />
+            {valor ? (
+              <Text style={[styles.hintRight, { color: theme.positive }]}>
+                {formatBRL(parseValueInput(valor))}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>Status</Text>
+            <View style={styles.statusRow}>
+              {STATUSES.map((s) => {
+                const active = status === s;
+                const c = statusColor(s);
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    testID={`status-option-${s.replace(/\s+/g, '-').toLowerCase()}`}
+                    onPress={() => setStatus(s)}
+                    style={[
+                      styles.statusChip,
+                      {
+                        backgroundColor: active ? c + '22' : theme.surface,
+                        borderColor: active ? c : theme.border,
+                      },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.statusDot, { backgroundColor: c }]} />
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        { color: active ? c : theme.textPrimary },
+                      ]}
+                    >
+                      {s}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              Horário da retirada
+            </Text>
             <View style={styles.row}>
               <TouchableOpacity
                 testID="pickup-date-btn"
-                style={styles.dateBtn}
+                style={[
+                  styles.dateBtn,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
                 onPress={() => setShowDatePicker(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="calendar-outline" size={18} color="#007AFF" />
-                <Text style={styles.dateBtnText}>
-                  {formatDateShort(pickup.toISOString())}/{pickup.getFullYear()}
+                <Ionicons name="calendar-outline" size={18} color={theme.primary} />
+                <Text style={[styles.dateBtnText, { color: theme.textPrimary }]}>
+                  {formatDateShort(pickup.toISOString())}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="pickup-time-btn"
-                style={styles.dateBtn}
+                style={[
+                  styles.dateBtn,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
                 onPress={() => setShowTimePicker(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="time-outline" size={18} color="#007AFF" />
-                <Text style={styles.dateBtnText}>
+                <Ionicons name="time-outline" size={18} color={theme.primary} />
+                <Text style={[styles.dateBtnText, { color: theme.textPrimary }]}>
                   {formatTimeShort(pickup.toISOString())}
                 </Text>
               </TouchableOpacity>
@@ -187,7 +276,7 @@ export default function ScheduleScreen() {
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onChangeDate}
-              themeVariant="dark"
+              themeVariant={theme.mode}
             />
           )}
           {showTimePicker && (
@@ -198,13 +287,17 @@ export default function ScheduleScreen() {
               is24Hour
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={onChangeTime}
-              themeVariant="dark"
+              themeVariant={theme.mode}
             />
           )}
 
           <TouchableOpacity
             testID="save-schedule-btn"
-            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+            style={[
+              styles.saveBtn,
+              { backgroundColor: theme.primary },
+              saving && { opacity: 0.6 },
+            ]}
             onPress={handleSave}
             disabled={saving}
             activeOpacity={0.85}
@@ -221,7 +314,9 @@ export default function ScheduleScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Text style={styles.cancelBtnText}>Cancelar</Text>
+            <Text style={[styles.cancelBtnText, { color: theme.textSecondary }]}>
+              Cancelar
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -230,62 +325,61 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0A0A' },
+  container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },
-  heading: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '900',
-    marginBottom: 4,
-    letterSpacing: 0.3,
-  },
-  sub: { color: '#8E8E93', fontSize: 14, marginBottom: 28 },
-  field: { marginBottom: 20 },
+  heading: { fontSize: 24, fontWeight: '900', marginBottom: 4, letterSpacing: 0.2 },
+  sub: { fontSize: 13, marginBottom: 24 },
+  field: { marginBottom: 18 },
   label: {
-    color: '#C7C7CC',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     marginBottom: 8,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   input: {
-    backgroundColor: '#121212',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#FFFFFF',
-    fontSize: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
   },
-  inputError: { borderColor: '#FF3B30' },
-  errorText: { color: '#FF3B30', fontSize: 12, marginTop: 6 },
+  hintRight: { fontSize: 12, marginTop: 6, fontWeight: '700' },
+  errorText: { fontSize: 12, marginTop: 6 },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  statusChipText: { fontSize: 12, fontWeight: '700' },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
   row: { flexDirection: 'row', gap: 12 },
   dateBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#121212',
     borderWidth: 1,
-    borderColor: '#2C2C2E',
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     gap: 8,
   },
-  dateBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  dateBtnText: { fontSize: 14, fontWeight: '700' },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     borderRadius: 12,
     paddingVertical: 16,
     gap: 8,
-    marginTop: 16,
+    marginTop: 12,
   },
   saveBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
-  cancelBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 14, marginTop: 8 },
-  cancelBtnText: { color: '#8E8E93', fontSize: 14, fontWeight: '600' },
+  cancelBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 14, marginTop: 4 },
+  cancelBtnText: { fontSize: 14, fontWeight: '600' },
 });

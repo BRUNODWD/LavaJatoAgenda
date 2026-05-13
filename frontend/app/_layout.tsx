@@ -1,20 +1,25 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { themes } from '../src/theme';
 
 export default function RootLayout() {
+  const scheme = useColorScheme();
+  const theme = scheme === 'dark' ? themes.dark : themes.light;
+
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style={theme.mode === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#0A0A0A' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontWeight: '900' },
-          contentStyle: { backgroundColor: '#0A0A0A' },
+          headerStyle: { backgroundColor: theme.background },
+          headerTintColor: theme.textPrimary,
+          headerTitleStyle: { fontWeight: '800' },
+          contentStyle: { backgroundColor: theme.background },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="schedule"
           options={{
